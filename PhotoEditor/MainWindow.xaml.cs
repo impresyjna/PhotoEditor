@@ -1,6 +1,7 @@
 ﻿using PluginsInterface;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -21,11 +22,41 @@ namespace PhotoEditor
     /// <summary>
     /// Interaction logic for MainWindow.xaml
     /// </summary>
-    public partial class MainWindow : Window
+    public partial class MainWindow : Window, INotifyPropertyChanged
     {
         private BitmapImage baseImage;
         private BitmapSource currentVersionOfImage;
         private Dictionary<Button, IPlugin> loadedPlugins;
+        public bool UndoEnable
+        {
+            get
+            {
+                return isUndoEnable;
+            }
+            set
+            {
+                isUndoEnable = value;
+                NotifyPropertyChanged("UndoEnable");
+            }
+        }
+
+        public bool RedoEnable
+        {
+            get
+            {
+                return isRedoEnable;
+            }
+            set
+            {
+                isRedoEnable = value;
+                NotifyPropertyChanged("RedoEnable");
+            }
+        }
+        private bool isUndoEnable;
+        private bool isRedoEnable;
+
+        private Stack<IPlugin> undoStack;
+        private Stack<IPlugin> redoStack;
 
         public MainWindow()
         {
@@ -33,6 +64,12 @@ namespace PhotoEditor
 
             loadedPlugins = new Dictionary<Button, IPlugin>();
             loadPlugins();
+
+            undoStack = new Stack<IPlugin>();
+            redoStack = new Stack<IPlugin>();
+
+            undoButton.DataContext = this;
+            redoButton.DataContext = this;
         }
 
         private void loadPlugins()
@@ -81,6 +118,12 @@ namespace PhotoEditor
                 baseImage = new BitmapImage(new Uri(dlg.FileName));
                 imageView.Source = baseImage;
                 currentVersionOfImage = baseImage;
+
+                undoStack.Clear();
+                UndoEnable = false;
+
+                redoStack.Clear();
+                RedoEnable = false;
             }
         }
 
@@ -92,6 +135,74 @@ namespace PhotoEditor
 
             currentVersionOfImage = plugin.doOperation(currentVersionOfImage);
             imageView.Source = currentVersionOfImage;
+
+            redoStack.Clear();
+            undoStack.Push(plugin);
+
+            UndoEnable = true;
+            RedoEnable = false;
         }
+
+        private void undoButton_Click(object sender, RoutedEventArgs e)
+        {
+            currentVersionOfImage = baseImage;
+
+            IPlugin undoneOperation = undoStack.Pop();
+            redoStack.Push(undoneOperation);
+
+            foreach (IPlugin operation in undoStack)
+            {
+                currentVersionOfImage = operation.doOperation(currentVersionOfImage);
+            }
+
+            imageView.Source = currentVersionOfImage;
+
+            if (undoStack.Count != 0)
+            {
+                UndoEnable = true;
+            }
+            else
+            {
+                UndoEnable = false; 
+            }
+            RedoEnable = true;
+        }
+
+        private void redoButton_Click(object sender, RoutedEventArgs e)
+        {
+            IPlugin redoneOperation = redoStack.Pop();
+            undoStack.Push(redoneOperation);
+            currentVersionOfImage = redoneOperation.doOperation(currentVersionOfImage);
+            imageView.Source = currentVersionOfImage;
+
+            if (undoStack.Count != 0)
+            {
+                UndoEnable = true;
+            }
+            else
+            {
+                UndoEnable = false;
+            }
+            if (redoStack.Count != 0)
+            {
+                RedoEnable = true;
+            }
+            else
+            {
+                RedoEnable = false;
+            }
+        }
+
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        public void NotifyPropertyChanged(string propertyName)
+        {
+            if (PropertyChanged != null)
+            {
+                PropertyChanged(this, new PropertyChangedEventArgs(propertyName));
+            }
+        }
+
+
     }
 }

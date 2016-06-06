@@ -7,10 +7,10 @@
             <Button Name="openButton" Click="openButton_Click">
                 <Label>Otwórz</Label>
             </Button>
-            <Button Name="undoButton" IsEnabled="{Binding UndoEnable}">
+            <Button Name="undoButton" IsEnabled="{Binding UndoEnable}" Click="undoButton_Click">
                 <Label>Cofnij</Label>
             </Button>
-            <Button Name="redoButton" IsEnabled="{Binding RedoEnable}">
+            <Button Name="redoButton" IsEnabled="{Binding RedoEnable}" Click="redoButton_Click">
                 <Label>Powtórz</Label>
             </Button>
         </ToolBar>
